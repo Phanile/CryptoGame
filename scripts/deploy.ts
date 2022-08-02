@@ -1,18 +1,32 @@
-import { ethers } from "hardhat";
+import { ethers, run } from "hardhat";
+import { Chakra__factory, FogCity__factory } from "../typechain-types";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+  const [signer] = await ethers.getSigners();
 
-  const lockedAmount = ethers.utils.parseEther("1");
+  const chakraToken = await new Chakra__factory(signer).deploy();
 
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  await chakraToken.deployed();
 
-  await lock.deployed();
+  console.log('Chakra deployed to: ', chakraToken.address);
 
-  console.log("Lock with 1 ETH deployed to:", lock.address);
+  const fogCityCollection = await new FogCity__factory(signer).deploy();
+
+  await fogCityCollection.deployed();
+
+  console.log('fogCityCollection deployed to: ', fogCityCollection.address);
+
+  await fogCityCollection.safeMint(signer.address, '');
+
+  await run('verify:verify', {
+    address: chakraToken.address,
+    contract: 'contracts/Chakra.sol:Chakra'
+  });
+
+  await run('verify:verify', {
+    address: fogCityCollection.address,
+    contract: 'contracts/FogCity.sol:FogCity'
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere
